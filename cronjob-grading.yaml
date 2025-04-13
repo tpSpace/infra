@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grading-job
+spec:
+  schedule: "0 * * * *" # Every hour
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: grading
+              image: your-grading-image
+              command: ["node", "grading.js"]
+              envFrom:
+                - configMapRef:
+                    name: app-config
+                - secretRef:
+                    name: db-credentials

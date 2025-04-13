@@ -1,7 +1,7 @@
 variable "project_id" {
   description = "The project ID to deploy resources"
   type        = string
-  default     = "led-hhjj"
+  default     = "trans-radius-456716-n5"
 }
 
 variable "region" {

@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: my-thesis
+
+resources:
+  - configmap.yaml
+  - secret.yaml
+  - deployment-backend.yaml
+  - deployment-frontend.yaml
+  - service-backend.yaml
+  - service-frontend.yaml
+  - statefulset-db.yaml
+  - service-db.yaml
+  - cronjob-grading.yaml
+  - job-seed.yaml
+
+images:
+  - name: thesis-be
+    newName: ghcr.io/tpspace/thesis-be
+    newTag: v1.0.0
+  - name: thesis-fe
+    newName: ghcr.io/tpspace/thesis-fe
+    newTag: v1.0.0
+  - name: thesis-analyzer
+    newName: ghcr.io/tpspace/thesis-analyzer
+    newTag: v1.0.0

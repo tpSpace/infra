@@ -2,13 +2,18 @@ provider "google" {
   project = var.project_id
   region  = var.region
 }
+
 terraform {
-   required_version = ">= 0.13"
-   
+  required_version = ">= 0.13"
+  
   required_providers {
     kubectl = {
       source  = "gavinbunney/kubectl"
-      version = ">= 1.19.0"  # Use latest stable version if needed
+      version = ">= 1.19.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.0.0"
     }
   }
 }
@@ -54,17 +59,14 @@ resource "google_container_node_pool" "node_pool" {
   }
 }
 
-# Get Google credentials for Kubernetes providers
 data "google_client_config" "default" {}
 
-# Configure Kubernetes provider
 provider "kubernetes" {
   host                   = "https://${google_container_cluster.gke.endpoint}"
   token                  = data.google_client_config.default.access_token
   cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
 }
 
-# Configure kubectl provider for YAML application
 provider "kubectl" {
   host                   = "https://${google_container_cluster.gke.endpoint}"
   token                  = data.google_client_config.default.access_token
@@ -72,10 +74,20 @@ provider "kubectl" {
   load_config_file       = false
 }
 
+# Create namespace
+resource "kubernetes_namespace" "thesis" {
+  metadata {
+    name = "my-thesis"
+  }
+  
+  depends_on = [google_container_node_pool.node_pool]
+}
+
 # Create GitHub Container Registry Secret
 resource "kubernetes_secret" "ghcr_secret" {
   metadata {
-    name = "ghcr-secret"
+    name      = "ghcr-secret"
+    namespace = kubernetes_namespace.thesis.metadata[0].name
   }
 
   type = "kubernetes.io/dockerconfigjson"
@@ -90,13 +102,21 @@ resource "kubernetes_secret" "ghcr_secret" {
     })
   }
 
-  depends_on = [google_container_node_pool.node_pool]
+  depends_on = [kubernetes_namespace.thesis]
 }
 
-# Apply frontend YAML manifest 
-resource "kubectl_manifest" "frontend_resources" {
-  for_each  = { for idx, doc in split("---", file("${path.module}/fe.yaml")) : idx => doc if trimspace(doc) != "" }
-  yaml_body = each.value
-  
-  depends_on = [kubernetes_secret.ghcr_secret]
+# Apply all Kubernetes resources using the external kustomization.yaml file
+resource "null_resource" "apply_kustomization" {
+  triggers = {
+    kustomization_sha1 = sha1(file("${path.module}/kustomization.yaml"))
+  }
+
+  provisioner "local-exec" {
+    command = "kubectl apply -k ${path.module}"
+    environment = {
+      KUBECONFIG = "~/.kube/config"
+    }
+  }
+
+  depends_on = [kubernetes_namespace.thesis, kubernetes_secret.ghcr_secret]
 }
