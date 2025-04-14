@@ -1,25 +1,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: backend
+  namespace: my-thesis
 spec:
-  replicas: 1 # Reduced for cost
+  replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: backend
   template:
     metadata:
       labels:
-        app: frontend
+        app: backend
     spec:
       containers:
-        - name: frontend
-          image: ghcr.io/tpspace/thesis-fe:latest
+        - name: backend
+          image: ghcr.io/tpspace/thesis-be:v1.0.0
           ports:
-            - containerPort: 3000
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: app-config # Assuming this ConfigMap exists from configmap.yaml
           env:
-            - name: NEXT_PUBLIC_GRAPHQL_URI
-              value: http://backend:4000/graphql
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: db_name
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: db_username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: db_password
           resources:
             limits:
               cpu: "500m"
@@ -27,5 +44,17 @@ spec:
             requests:
               cpu: "200m"
               memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 20
       imagePullSecrets:
         - name: ghcr-secret

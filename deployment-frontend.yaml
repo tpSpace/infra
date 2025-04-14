@@ -2,8 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
+  namespace: my-thesis
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -14,11 +15,23 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/tpspace/thesis-fe:latest
+          image: ghcr.io/tpspace/thesis-fe:v1.0.0
           ports:
             - containerPort: 3000
           env:
             - name: NEXT_PUBLIC_GRAPHQL_URI
               value: http://backend:4000/graphql
+            - name: REACT_APP_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: REACT_APP_API_URL
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
       imagePullSecrets:
         - name: ghcr-secret

@@ -2,13 +2,16 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
+  namespace: my-thesis
 data:
   DATABASE_HOST: postgres
   DATABASE_PORT: "5432"
   BACKEND_PORT: "4000"
-
-  ROLE_ADMIN_CODE: 1
-  ROLE_TEACHER_CODE: 2
-  ROLE_STUDENT_CODE_CODE: 3
-
+  ROLE_ADMIN_CODE: "1"
+  ROLE_TEACHER_CODE: "2"
+  DB_NAME: "${DB_NAME}"
+  DB_USER: "${DB_USER}"
+  DB_PASSWORD: "${DB_PASSWORD}"
+  GHCR_TOKEN: "${GHCR_TOKEN}"
+  ROLE_STUDENT_CODE: "3"
   NEXT_PUBLIC_GRAPHQL_URI: http://backend:4000/graphql

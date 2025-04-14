@@ -15,22 +15,16 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.23.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9.0"
+    }
     google = {
       source  = "hashicorp/google"
       version = "~> 5.0.0"
     }
   }
 }
-
-# # Networking
-# resource "google_compute_network" "vpc" {
-#   name                    = "gke-vpc"
-#   auto_create_subnetworks = true
-
-#   lifecycle {
-#     prevent_destroy = true
-#   }
-# }
 
 # GKE Cluster
 resource "google_container_cluster" "gke" {
@@ -39,9 +33,7 @@ resource "google_container_cluster" "gke" {
 
   remove_default_node_pool = true
   initial_node_count       = 1
-
-  # network    = google_compute_network.vpc.name
-
+  deletion_protection      = false
 }
 
 # Node Pool
@@ -49,16 +41,27 @@ resource "google_container_node_pool" "node_pool" {
   name       = "app-node-pool"
   cluster    = google_container_cluster.gke.id
   node_count = var.node_count
-
+  location   = google_container_cluster.gke.location
+  
   node_config {
     machine_type = "e2-small"
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     disk_size_gb = 20
     disk_type    = "pd-standard"
+    image_type   = "COS_CONTAINERD"
   }
+
+  depends_on = [google_container_cluster.gke]
 }
 
-# Kubernetes Providers
+
+# Remove or comment out this resource completely:
+resource "time_sleep" "wait_for_kubernetes" {
+  depends_on      = [google_container_node_pool.node_pool]
+  create_duration = "90s"
+}
+
+
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
@@ -74,14 +77,12 @@ provider "kubectl" {
   load_config_file       = false
 }
 
-# Namespace
 resource "kubernetes_namespace" "my_thesis" {
   metadata {
     name = "my-thesis"
-  }
+  } 
 }
 
-# GHCR Secret
 resource "kubernetes_secret" "ghcr_secret" {
   metadata {
     name      = "ghcr-secret"
@@ -99,9 +100,11 @@ resource "kubernetes_secret" "ghcr_secret" {
       }
     })
   }
+
+  # depends_on = [kubernetes_namespace.my_thesis, time_sleep.wait_for_kubernetes]  <-- Remove time_sleep
+  depends_on = [kubernetes_namespace.my_thesis]
 }
 
-# Database Secret
 resource "kubernetes_secret" "db_credentials" {
   metadata {
     name      = "db-credentials"
@@ -112,17 +115,37 @@ resource "kubernetes_secret" "db_credentials" {
     db_name     = base64encode(var.db_name)
     db_username = base64encode(var.db_username)
     db_password = base64encode(var.db_password)
+    REACT_APP_API_URL = base64encode("http://backend:4000")
   }
 
   type = "Opaque"
+  # depends_on = [kubernetes_namespace.my_thesis, time_sleep.wait_for_kubernetes]  <-- Remove time_sleep
+  depends_on = [kubernetes_namespace.my_thesis]
 }
 
-# Apply Kustomize
-resource "kubectl_manifest" "kustomize" {
+locals {
+  k8s_manifests = [
+    "configmap.yaml",
+    "service-db.yaml",
+    "statefulset-db.yaml",
+    "service-backend.yaml",
+    "deployment-backend.yaml",
+    "service-frontend.yaml",
+    "deployment-frontend.yaml",
+  ]
+}
+
+resource "kubectl_manifest" "k8s_resources" {
+  for_each  = { for idx, file in local.k8s_manifests : file => idx }
+  yaml_body = file(each.key)
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
-    kubernetes_secret.db_credentials
+    kubernetes_secret.db_credentials,
+    time_sleep.wait_for_kubernetes  # Add this back
   ]
-  yaml_body = file("./kustomization.yaml")
+}
+
+output "cluster_endpoint" {
+  value = google_container_cluster.gke.endpoint
 }

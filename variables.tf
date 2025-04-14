@@ -1,53 +1,51 @@
 variable "project_id" {
-  description = "The project ID to deploy resources"
+  description = "GCP project ID"
   type        = string
-  default     = "trans-radius-456716-n5"
 }
 
 variable "region" {
-  description = "The region to deploy resources"
+  description = "GCP region"
   type        = string
-  default     = "asia-southeast1"
+  default     = "us-central1"
 }
 
 variable "cluster_name" {
-  description = "The name of the GKE cluster"
+  description = "Name of the GKE cluster"
   type        = string
-  default     = "gke-cluster"
+  default     = "thesis-cluster"
 }
 
 variable "node_count" {
-  description = "The number of nodes in the node pool"
+  description = "Number of nodes in the GKE node pool"
   type        = number
-  default     = 2
+  default     = 1
 }
 
-variable "ghcr_username" {
-  description = "tpSpace"
-  type        = string
-  sensitive   = true
-}
-
-variable "ghcr_token" {
-  description = ""
-  type        = string
-  sensitive   = true
-}
-
-variable "db_name" {
-  description = "thesisdb"
-  type        = string
-  sensitive   = true
-}
 variable "db_username" {
-  description = "postgre"
+  description = "Database username"
   type        = string
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "conghoaxa"
+  description = "Database password"
   type        = string
   sensitive   = true
 }
 
+variable "db_name" {
+  description = "Database name"
+  type        = string
+  default     = "neondb"
+}
+
+variable "ghcr_username" {
+  description = "GitHub Container Registry username"
+  type        = string
+}
+
+variable "ghcr_token" {
+  description = "GitHub Container Registry token"
+  type        = string
+  sensitive   = true
+}

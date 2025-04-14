@@ -1,1 +1,44 @@
 # infra
+
+## Overview
+
+This repository contains the infrastructure configuration for the thesis project, including Kubernetes manifests for backend and frontend services.
+
+## Services
+
+- **Backend Service**: Exposes the backend application on port 4000.
+- **Frontend Service**: Exposes the frontend application on port 80.
+
+## Deployment
+
+The deployment files define the specifications for the backend and frontend applications, including environment variables and resource limits.
+
+## Directory Structure
+
+```plaintext
+.
+├── main.tf
+├── variables.tf
+├── terraform.tfvars
+├── configmap.yaml
+├── service-db.yaml
+├── statefulset-db.yaml
+├── service-backend.yaml
+├── deployment-backend.yaml
+├── service-frontend.yaml
+├── deployment-frontend.yaml
+└── README.md
+```
+
+## Usage
+
+```bash
+# Stage 1: Create only the GKE infrastructure
+terraform apply -target=google_container_cluster.gke -target=google_container_node_pool.node_pool
+
+# Get credentials after cluster is created
+gcloud container clusters get-credentials ${var.cluster_name} --region=${var.region}
+
+# Stage 2: Apply the Kubernetes resources
+terraform apply
+```
