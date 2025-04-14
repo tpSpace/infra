@@ -4,61 +4,61 @@ provider "google" {
 }
 
 terraform {
-  required_version = ">= 0.13"
-  
+  required_version = ">= 1.9.0"
+
   required_providers {
     kubectl = {
       source  = "gavinbunney/kubectl"
-      version = ">= 1.19.0"
+      version = "~> 1.14.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.0.0"
+      version = "~> 2.23.0"
+    }
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0.0"
     }
   }
 }
 
-# Create VPC network
-resource "google_compute_network" "vpc" {
-  name                    = "gke-vpc"
-  auto_create_subnetworks = false
-}
+# # Networking
+# resource "google_compute_network" "vpc" {
+#   name                    = "gke-vpc"
+#   auto_create_subnetworks = true
 
-# Create subnet
-resource "google_compute_subnetwork" "subnet" {
-  name          = "gke-subnet"
-  network       = google_compute_network.vpc.id
-  ip_cidr_range = "10.0.0.0/16"
-  region        = var.region
-}
+#   lifecycle {
+#     prevent_destroy = true
+#   }
+# }
 
-# Create GKE cluster
+# GKE Cluster
 resource "google_container_cluster" "gke" {
   name     = var.cluster_name
   location = var.region
 
-  # Remove default node pool after cluster creation
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = google_compute_network.vpc.name
-  subnetwork = google_compute_subnetwork.subnet.name
+  # network    = google_compute_network.vpc.name
+
 }
 
-# Create custom node pool
+# Node Pool
 resource "google_container_node_pool" "node_pool" {
   name       = "app-node-pool"
   cluster    = google_container_cluster.gke.id
   node_count = var.node_count
 
   node_config {
-    machine_type = "e2-medium"
+    machine_type = "e2-small"
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    disk_size_gb = 50
-    disk_type    = "pd-ssd"
+    disk_size_gb = 20
+    disk_type    = "pd-standard"
   }
 }
 
+# Kubernetes Providers
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
@@ -74,20 +74,18 @@ provider "kubectl" {
   load_config_file       = false
 }
 
-# Create namespace
-resource "kubernetes_namespace" "thesis" {
+# Namespace
+resource "kubernetes_namespace" "my_thesis" {
   metadata {
     name = "my-thesis"
   }
-  
-  depends_on = [google_container_node_pool.node_pool]
 }
 
-# Create GitHub Container Registry Secret
+# GHCR Secret
 resource "kubernetes_secret" "ghcr_secret" {
   metadata {
     name      = "ghcr-secret"
-    namespace = kubernetes_namespace.thesis.metadata[0].name
+    namespace = "my-thesis"
   }
 
   type = "kubernetes.io/dockerconfigjson"
@@ -101,22 +99,30 @@ resource "kubernetes_secret" "ghcr_secret" {
       }
     })
   }
-
-  depends_on = [kubernetes_namespace.thesis]
 }
 
-# Apply all Kubernetes resources using the external kustomization.yaml file
-resource "null_resource" "apply_kustomization" {
-  triggers = {
-    kustomization_sha1 = sha1(file("${path.module}/kustomization.yaml"))
+# Database Secret
+resource "kubernetes_secret" "db_credentials" {
+  metadata {
+    name      = "db-credentials"
+    namespace = "my-thesis"
   }
 
-  provisioner "local-exec" {
-    command = "kubectl apply -k ${path.module}"
-    environment = {
-      KUBECONFIG = "~/.kube/config"
-    }
+  data = {
+    db_name     = base64encode(var.db_name)
+    db_username = base64encode(var.db_username)
+    db_password = base64encode(var.db_password)
   }
 
-  depends_on = [kubernetes_namespace.thesis, kubernetes_secret.ghcr_secret]
+  type = "Opaque"
+}
+
+# Apply Kustomize
+resource "kubectl_manifest" "kustomize" {
+  depends_on = [
+    kubernetes_namespace.my_thesis,
+    kubernetes_secret.ghcr_secret,
+    kubernetes_secret.db_credentials
+  ]
+  yaml_body = file("./kustomization.yaml")
 }

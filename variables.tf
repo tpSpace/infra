@@ -23,13 +23,31 @@ variable "node_count" {
 }
 
 variable "ghcr_username" {
-  description = "GitHub username for Container Registry authentication"
+  description = "tpSpace"
   type        = string
   sensitive   = true
 }
 
 variable "ghcr_token" {
-  description = "GitHub personal access token for Container Registry authentication"
+  description = ""
   type        = string
   sensitive   = true
 }
+
+variable "db_name" {
+  description = "thesisdb"
+  type        = string
+  sensitive   = true
+}
+variable "db_username" {
+  description = "postgre"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_password" {
+  description = "conghoaxa"
+  type        = string
+  sensitive   = true
+}
+

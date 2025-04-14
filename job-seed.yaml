@@ -8,10 +8,12 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: seed
-          image: your-backend-image
+          image: ghcr.io/tpspace/thesis-be:latest
           command: ["sh", "-c", "npx prisma migrate deploy && npm run seed"]
           envFrom:
             - configMapRef:
                 name: app-config
             - secretRef:
                 name: db-credentials
+      imagePullSecrets:
+        - name: ghcr-secret
