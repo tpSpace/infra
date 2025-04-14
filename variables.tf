@@ -6,7 +6,7 @@ variable "project_id" {
 variable "region" {
   description = "GCP region"
   type        = string
-  default     = "us-central1"
+  default     = "asia-east2-a"
 }
 
 variable "cluster_name" {
@@ -36,7 +36,7 @@ variable "db_password" {
 variable "db_name" {
   description = "Database name"
   type        = string
-  default     = "neondb"
+  default     = "thesisdb"
 }
 
 variable "ghcr_username" {

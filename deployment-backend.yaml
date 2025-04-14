@@ -15,12 +15,12 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/tpspace/thesis-be:v1.0.0
+          image: ghcr.io/tpspace/thesis-be:latest
           ports:
             - containerPort: 4000
           envFrom:
             - configMapRef:
-                name: app-config # Assuming this ConfigMap exists from configmap.yaml
+                name: app-config
           env:
             - name: POSTGRES_DB
               valueFrom:
@@ -39,11 +39,11 @@ spec:
                   key: db_password
           resources:
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "2000m" # Increased to 1 vCPU
+              memory: "2048Mi" # Increased to 1 GB
             requests:
-              cpu: "200m"
-              memory: "256Mi"
+              cpu: "1000m" # Increased to 0.5 vCPUs
+              memory: "1024Mi" # Increased to 512 MB
           readinessProbe:
             httpGet:
               path: /health

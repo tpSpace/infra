@@ -9,9 +9,9 @@ data:
   BACKEND_PORT: "4000"
   ROLE_ADMIN_CODE: "1"
   ROLE_TEACHER_CODE: "2"
-  DB_NAME: "${DB_NAME}"
-  DB_USER: "${DB_USER}"
-  DB_PASSWORD: "${DB_PASSWORD}"
-  GHCR_TOKEN: "${GHCR_TOKEN}"
+  DB_NAME: "thesisdb"
+  DB_USER: "postgres"
+  DB_PASSWORD: "conghoaxa"
+  GHCR_TOKEN: "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"
   ROLE_STUDENT_CODE: "3"
   NEXT_PUBLIC_GRAPHQL_URI: http://backend:4000/graphql

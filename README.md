@@ -42,3 +42,17 @@ gcloud container clusters get-credentials ${var.cluster_name} --region=${var.reg
 # Stage 2: Apply the Kubernetes resources
 terraform apply
 ```
+
+## kubectl
+
+Show all pods in the `my-thesis` namespace:
+
+```bash
+ kubectl get pods -n my-thesis
+```
+
+Show all pods in the `my-thesis` namespace with additional information:
+
+```bash
+ kubectl get pods -n my-thesis -o wide
+```

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/tpspace/thesis-fe:v1.0.0
+          image: ghcr.io/tpspace/thesis-fe:latest
           ports:
             - containerPort: 3000
           env:

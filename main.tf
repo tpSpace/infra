@@ -4,27 +4,28 @@ provider "google" {
 }
 
 terraform {
-  required_version = ">= 1.9.0"
+  required_version = ">= 1.11.4"
 
   required_providers {
     kubectl = {
       source  = "gavinbunney/kubectl"
-      version = "~> 1.14.0"
+      version = "~> 1.19.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.23.0"
+      version = "~> 2.36.0"
     }
     time = {
       source  = "hashicorp/time"
-      version = "~> 0.9.0"
+      version = "~> 0.13.0"
     }
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.0.0"
+      version = "~> 6.29.0"
     }
   }
 }
+
 
 # GKE Cluster
 resource "google_container_cluster" "gke" {
@@ -54,15 +55,9 @@ resource "google_container_node_pool" "node_pool" {
   depends_on = [google_container_cluster.gke]
 }
 
-
-# Remove or comment out this resource completely:
-resource "time_sleep" "wait_for_kubernetes" {
-  depends_on      = [google_container_node_pool.node_pool]
-  create_duration = "90s"
+data "google_client_config" "default" {
+  provider = google
 }
-
-
-data "google_client_config" "default" {}
 
 provider "kubernetes" {
   host                   = "https://${google_container_cluster.gke.endpoint}"
@@ -80,9 +75,9 @@ provider "kubectl" {
 resource "kubernetes_namespace" "my_thesis" {
   metadata {
     name = "my-thesis"
-  } 
+  }
+  depends_on = [google_container_cluster.gke]  
 }
-
 resource "kubernetes_secret" "ghcr_secret" {
   metadata {
     name      = "ghcr-secret"
@@ -100,9 +95,6 @@ resource "kubernetes_secret" "ghcr_secret" {
       }
     })
   }
-
-  # depends_on = [kubernetes_namespace.my_thesis, time_sleep.wait_for_kubernetes]  <-- Remove time_sleep
-  depends_on = [kubernetes_namespace.my_thesis]
 }
 
 resource "kubernetes_secret" "db_credentials" {
@@ -141,8 +133,7 @@ resource "kubectl_manifest" "k8s_resources" {
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
-    kubernetes_secret.db_credentials,
-    time_sleep.wait_for_kubernetes  # Add this back
+    kubernetes_secret.db_credentials
   ]
 }
 
