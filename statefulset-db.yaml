@@ -4,7 +4,7 @@ metadata:
   name: postgres
   namespace: my-thesis
 spec:
-  serviceName: postgres
+  serviceName: postgres-headless
   replicas: 1
   selector:
     matchLabels:
@@ -14,13 +14,61 @@ spec:
       labels:
         app: postgres
     spec:
+      securityContext:
+        fsGroup: 999
       containers:
         - name: postgres
-          image: postgres:latest
+          image: postgres:17
           resources:
             requests:
-              cpu: "1000m"
-              memory: "4Gi"
+              cpu: "150m"
+              memory: "384Mi"
             limits:
-              cpu: "2000m"
-              memory: "4Gi"
+              cpu: "300m"
+              memory: "768Mi"
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: db_name
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: db_username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: db_password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata/data
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data/pgdata
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $$POSTGRES_USER
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $$POSTGRES_USER
+            initialDelaySeconds: 10
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi

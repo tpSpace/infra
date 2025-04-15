@@ -45,7 +45,7 @@ resource "google_container_node_pool" "node_pool" {
   location   = google_container_cluster.gke.location
   
   node_config {
-    machine_type = "e2-small"
+    machine_type = "e2-medium"
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     disk_size_gb = 20
     disk_type    = "pd-standard"
@@ -139,4 +139,9 @@ resource "kubectl_manifest" "k8s_resources" {
 
 output "cluster_endpoint" {
   value = google_container_cluster.gke.endpoint
+}
+
+resource "kubectl_manifest" "argocd_install" {
+  yaml_body = file("argocd-install.yaml")
+  depends_on = [google_container_node_pool.node_pool]
 }

@@ -37,13 +37,18 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: db_password
+            - name: DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DATASOURCE_URL
           resources:
             limits:
-              cpu: "2000m" # Increased to 1 vCPU
-              memory: "2048Mi" # Increased to 1 GB
+              cpu: "500m"
+              memory: "1024Mi"
             requests:
-              cpu: "1000m" # Increased to 0.5 vCPUs
-              memory: "1024Mi" # Increased to 512 MB
+              cpu: "250m"
+              memory: "512Mi"
           readinessProbe:
             httpGet:
               path: /health
