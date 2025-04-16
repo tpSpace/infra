@@ -116,6 +116,7 @@ locals {
     # "argocd-install.yaml",
     "deployment-backend.yaml",
     "service-frontend.yaml",
+    "ingress.yaml",
     "deployment-frontend.yaml",
   ]
 }
