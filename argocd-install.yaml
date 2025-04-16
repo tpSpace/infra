@@ -365,7 +365,7 @@ metadata:
 type: Opaque
 stringData:
   # This is a placeholder - you should replace with your actual token
-  GITHUB_TOKEN: "your-github-token-here"
+  GITHUB_TOKEN: GHCT_TOKEN
 ---
 apiVersion: v1
 kind: ConfigMap
