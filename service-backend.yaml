@@ -4,7 +4,10 @@ metadata:
   name: backend
   namespace: my-thesis
 spec:
+  type: LoadBalancer
   selector:
     app: backend
   ports:
-    - port: 4000
+    - protocol: TCP
+      port: 4000
+      targetPort: 4000

@@ -106,25 +106,6 @@ resource "kubernetes_secret" "ghcr_secret" {
   }
 }
 
-# resource "kubernetes_secret" "db_credentials" {
-#   metadata {
-#     name      = "db-credentials"
-#     namespace = "my-thesis"
-#   }
-
-#   data = {
-#     db_name     = base64encode(var.db_name)
-#     db_username = base64encode(var.db_username)
-#     db_password = base64encode(var.db_password)
-#     DATASOURCE_URL = base64encode("postgresql://${var.db_username}:${var.db_password}@postgres:5432/${var.db_name}")
-#     REACT_APP_API_URL = base64encode("http://backend:4000")
-#   }
-
-#   type = "Opaque"
-#   # depends_on = [kubernetes_namespace.my_thesis, time_sleep.wait_for_kubernetes]  <-- Remove time_sleep
-#   depends_on = [kubernetes_namespace.my_thesis]
-# }
-
 locals {
   k8s_manifests = [
     "configmap.yaml",
@@ -145,7 +126,6 @@ resource "kubectl_manifest" "k8s_resources" {
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
-    # kubernetes_secret.db_credentials
   ]
 }
 

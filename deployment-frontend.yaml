@@ -18,14 +18,15 @@ spec:
           image: ghcr.io/tpspace/thesis-fe:latest
           ports:
             - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: app-config
           env:
             - name: NEXT_PUBLIC_GRAPHQL_URI
-              value: http://backend:4000/graphql
-            - name: REACT_APP_API_URL
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
-                  key: REACT_APP_API_URL
+                  key: NEXT_PUBLIC_GRAPHQL_URI
           resources:
             limits:
               cpu: "500m"

@@ -6,9 +6,10 @@ metadata:
 data:
   DATABASE_HOST: postgres
   DATABASE_PORT: "5432"
-  BACKEND_PORT: "4000"
+  PORT: "4000"
   DATASOURCE_URL: "postgresql://postgres:conghoaxa@postgres:5432/thesisdb"
   ROLE_ADMIN_CODE: "1"
   ROLE_TEACHER_CODE: "2"
   ROLE_STUDENT_CODE: "3"
-  NEXT_PUBLIC_GRAPHQL_URI: http://backend:4000/graphql
+  CLIENT_ORIGIN: "http://frontend:3000"
+  NEXT_PUBLIC_GRAPHQL_URI: "backend.my-thesis.svc.cluster.local"
