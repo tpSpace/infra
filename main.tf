@@ -23,9 +23,12 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 6.29.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.9.0"
+    }
   }
 }
-
 
 # GKE Cluster
 resource "google_container_cluster" "gke" {
@@ -81,12 +84,21 @@ provider "kubectl" {
   load_config_file       = false
 }
 
+provider "helm" {
+  kubernetes {
+    host                   = "https://${google_container_cluster.gke.endpoint}"
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
+  }
+}
+
 resource "kubernetes_namespace" "my_thesis" {
   metadata {
     name = "my-thesis"
   }
   depends_on = [google_container_cluster.gke]  
 }
+
 resource "kubernetes_secret" "ghcr_secret" {
   metadata {
     name      = "ghcr-secret"
@@ -104,6 +116,38 @@ resource "kubernetes_secret" "ghcr_secret" {
       }
     })
   }
+}
+
+# Install Nginx Ingress Controller
+resource "helm_release" "nginx_ingress" {
+  name             = "nginx-ingress"
+  repository       = "https://kubernetes.github.io/ingress-nginx"
+  chart            = "ingress-nginx"
+  namespace        = "ingress-nginx"
+  create_namespace = true
+  
+  set {
+    name  = "controller.service.type"
+    value = "LoadBalancer"
+  }
+  
+  set {
+    name  = "controller.service.externalTrafficPolicy"
+    value = "Local"
+  }
+  
+  depends_on = [
+    google_container_node_pool.node_pool
+  ]
+}
+
+# Data source to get the Ingress Controller's external IP
+data "kubernetes_service" "ingress_controller" {
+  metadata {
+    name      = "nginx-ingress-ingress-nginx-controller"
+    namespace = "ingress-nginx"
+  }
+  depends_on = [helm_release.nginx_ingress]
 }
 
 locals {
@@ -127,9 +171,15 @@ resource "kubectl_manifest" "k8s_resources" {
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
+    helm_release.nginx_ingress,
   ]
 }
 
 output "cluster_endpoint" {
   value = google_container_cluster.gke.endpoint
+}
+
+output "ingress_controller_ip" {
+  value       = data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip
+  description = "External IP address of the Nginx Ingress Controller"
 }
