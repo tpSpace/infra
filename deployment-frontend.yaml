@@ -18,14 +18,11 @@ spec:
           image: ghcr.io/tpspace/thesis-fe:latest
           ports:
             - containerPort: 3000
-          envFrom:
-            - configMapRef:
-                name: app-config
           env:
             - name: NEXT_PUBLIC_GRAPHQL_URI
               valueFrom:
-                secretKeyRef:
-                  name: db-credentials
+                configMapKeyRef:
+                  name: app-config
                   key: NEXT_PUBLIC_GRAPHQL_URI
           resources:
             limits:
