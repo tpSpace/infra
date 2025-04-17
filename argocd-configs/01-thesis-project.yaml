@@ -11,6 +11,7 @@ spec:
     - https://github.com/tpSpace/thesis-fe.git
     - https://github.com/tpSpace/thesis-be.git
     - https://github.com/tpSpace/infra.git
+    - git@github.com:tpSpace/infra.git
 
   # Destinations that applications within this project can deploy to
   destinations:
