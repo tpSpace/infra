@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/tpSpace/infra.git
     targetRevision: HEAD
-    path: ./fe
+    path: fe
   destination:
     server: https://kubernetes.default.svc
     namespace: my-thesis
