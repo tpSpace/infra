@@ -135,6 +135,26 @@ resource "helm_release" "nginx_ingress" {
     name  = "controller.service.externalTrafficPolicy"
     value = "Local"
   }
+
+  set {
+  name  = "controller.config.proxy-read-timeout"
+  value = "3600"
+}
+
+  set {
+    name  = "controller.config.proxy-send-timeout" 
+    value = "3600"
+  }
+
+  set {
+    name  = "controller.config.proxy-body-size"
+    value = "20m"
+  }
+
+  set {
+    name  = "controller.logLevel"
+    value = "2"
+  }
   
   depends_on = [
     google_container_node_pool.node_pool
@@ -156,12 +176,30 @@ locals {
     "secret.yaml",
     "service-db.yaml",
     "statefulset-db.yaml",
-    "service-backend.yaml",
-    # "argocd-install.yaml",
-    "deployment-backend.yaml",
-    "service-frontend.yaml",
-    "ingress.yaml",
-    "deployment-frontend.yaml",
+    "be/service-backend.yaml",
+    "be/deployment-backend.yaml",
+    "fe/service-frontend.yaml",
+    "fe/deployment-frontend.yaml",
+    "argocd-install.yaml",
+    "argocd-install-rendered.yaml",
+  ]
+  
+  argocd_manifests = [
+    "argocd-configs/00-namespace.yaml",
+    "argocd-configs/01-thesis-project.yaml",
+    "argocd-configs/02-github-repo-secret.yaml",
+    "argocd-configs/03-frontend-application.yaml", 
+    "argocd-configs/04-backend-application.yaml",
+  ]
+}
+
+resource "kubectl_manifest" "argocd_resources" {
+  for_each  = { for idx, file in local.argocd_manifests : file => idx }
+  yaml_body = file(each.key)
+  depends_on = [
+    kubernetes_namespace.my_thesis,
+    kubernetes_secret.ghcr_secret,
+    # helm_release.nginx_ingress,
   ]
 }
 
@@ -171,7 +209,7 @@ resource "kubectl_manifest" "k8s_resources" {
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
-    helm_release.nginx_ingress,
+    # helm_release.nginx_ingress,
   ]
 }
 

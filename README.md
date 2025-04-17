@@ -56,3 +56,26 @@ Show all pods in the `my-thesis` namespace with additional information:
 ```bash
  kubectl get pods -n my-thesis -o wide
 ```
+
+Argocd
+Access the ArgoCD UI
+
+```bash
+kubectl get svc argocd-server -n argocd
+```
+
+Get the ArgoCD password
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
+
+```
+NNNISSqQcReG9vKc
+```
+
+## Restart ArgoCD Deployments
+
+```bash
+kubectl rollout restart deployment -l app.kubernetes.io/part-of=argocd -n argocd
+```
