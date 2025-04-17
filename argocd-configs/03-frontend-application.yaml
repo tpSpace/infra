@@ -6,7 +6,7 @@ metadata:
 spec:
   project: thesis
   source:
-    repoURL: https://github.com/tpSpace/thesis-fe.git
+    repoURL: https://github.com/tpSpace/infra.git
     targetRevision: HEAD
     path: ./fe
   destination:
