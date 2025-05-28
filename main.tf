@@ -42,11 +42,11 @@ resource "google_container_cluster" "gke" {
 
 # Node Pool
 resource "google_container_node_pool" "node_pool" {
-  name       = "app-node-pool"
-  cluster    = google_container_cluster.gke.id
+  name    = "app-node-pool"
+  cluster = google_container_cluster.gke.id
   # node_count = var.node_count
-  location   = google_container_cluster.gke.location
-  
+  location = google_container_cluster.gke.location
+
   autoscaling {
     min_node_count = 2
     max_node_count = 5
@@ -96,7 +96,7 @@ resource "kubernetes_namespace" "my_thesis" {
   metadata {
     name = "my-thesis"
   }
-  depends_on = [google_container_cluster.gke]  
+  depends_on = [google_container_cluster.gke]
 }
 
 resource "kubernetes_secret" "ghcr_secret" {
@@ -125,24 +125,24 @@ resource "helm_release" "nginx_ingress" {
   chart            = "ingress-nginx"
   namespace        = "ingress-nginx"
   create_namespace = true
-  
+
   set {
     name  = "controller.service.type"
     value = "LoadBalancer"
   }
-  
+
   set {
     name  = "controller.service.externalTrafficPolicy"
     value = "Local"
   }
 
   set {
-  name  = "controller.config.proxy-read-timeout"
-  value = "3600"
-}
+    name  = "controller.config.proxy-read-timeout"
+    value = "3600"
+  }
 
   set {
-    name  = "controller.config.proxy-send-timeout" 
+    name  = "controller.config.proxy-send-timeout"
     value = "3600"
   }
 
@@ -155,7 +155,7 @@ resource "helm_release" "nginx_ingress" {
     name  = "controller.logLevel"
     value = "2"
   }
-  
+
   depends_on = [
     google_container_node_pool.node_pool
   ]
@@ -168,6 +168,24 @@ data "kubernetes_service" "ingress_controller" {
     namespace = "ingress-nginx"
   }
   depends_on = [helm_release.nginx_ingress]
+}
+
+# Install ArgoCD
+resource "helm_release" "argocd" {
+  name             = "argocd"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  namespace        = "argocd"
+  create_namespace = true
+
+  set {
+    name  = "server.service.type"
+    value = "ClusterIP"
+  }
+
+  depends_on = [
+    google_container_node_pool.node_pool
+  ]
 }
 
 locals {
@@ -183,12 +201,12 @@ locals {
     "argocd-install.yaml",
     "argocd-install-rendered.yaml",
   ]
-  
+
   argocd_manifests = [
     "argocd-configs/00-namespace.yaml",
     "argocd-configs/01-thesis-project.yaml",
     "argocd-configs/02-github-repo-secret.yaml",
-    "argocd-configs/03-frontend-application.yaml", 
+    "argocd-configs/03-frontend-application.yaml",
     "argocd-configs/04-backend-application.yaml",
   ]
 }
@@ -199,7 +217,7 @@ resource "kubectl_manifest" "argocd_resources" {
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
-    # helm_release.nginx_ingress,
+    helm_release.argocd,
   ]
 }
 

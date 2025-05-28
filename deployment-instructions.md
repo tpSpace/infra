@@ -7,10 +7,10 @@ This document provides step-by-step instructions for setting up ArgoCD and deplo
 - Kubernetes cluster is up and running
 - `kubectl` is installed and configured to access your cluster
 - You have access to the GitHub repositories:
-  - Frontend: https://github.com/tpSpace/thesis-fe.git
-  - Backend: https://github.com/tpSpace/thesis-be.git
+  - Frontend: <https://github.com/tpSpace/thesis-fe.git>
+  - Backend: <https://github.com/tpSpace/thesis-be.git>
 
-## 1. Install ArgoCD
+## 1. Install ArgoCD  
 
 ```bash
 # Create namespace for ArgoCD
@@ -32,7 +32,7 @@ kubectl wait --for=condition=available --timeout=300s deployment/argocd-applicat
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
 
-You can now access the ArgoCD UI at https://localhost:8080
+You can now access the ArgoCD UI at <https://localhost:8080>
 
 To get the initial admin password:
 
@@ -61,13 +61,13 @@ kubectl apply -f 04-backend-application.yaml
 kubectl get applications -n argocd
 ```
 
-2. Verify that the applications are syncing:
+1. Verify that the applications are syncing:
 
 ```bash
 kubectl get applications thesis-frontend thesis-backend -n argocd -o jsonpath='{.items[*].status.sync.status}'
 ```
 
-3. Check that the pods are running in the my-thesis namespace:
+1. Check that the pods are running in the my-thesis namespace:
 
 ```bash
 kubectl get pods -n my-thesis
@@ -93,13 +93,13 @@ If you encounter issues with repository access:
 kubectl get secret github-repo-creds-pattern -n argocd -o jsonpath='{.data.password}' | base64 -d
 ```
 
-2. Check ArgoCD logs for repository connection issues:
+1. Check ArgoCD logs for repository connection issues:
 
 ```bash
 kubectl logs -n argocd deployment/argocd-repo-server
 ```
 
-3. If needed, update the repository secret with a new token:
+1. If needed, update the repository secret with a new token:
 
 ```bash
 kubectl patch secret github-repo-creds-pattern -n argocd --type='json' -p='[{"op": "replace", "path": "/stringData/password", "value": "your-new-token"}]'
