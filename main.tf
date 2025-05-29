@@ -1,6 +1,7 @@
 provider "google" {
-  project = var.project_id
-  region  = var.region
+  project     = var.project_id
+  region      = var.region
+  credentials = file("credentials.json")
 }
 
 terraform {
@@ -156,6 +157,12 @@ resource "helm_release" "nginx_ingress" {
     value = "2"
   }
 
+  # Disable webhook validation temporarily
+  set {
+    name  = "controller.admissionWebhooks.enabled"
+    value = "false"
+  }
+
   depends_on = [
     google_container_node_pool.node_pool
   ]
@@ -170,7 +177,14 @@ data "kubernetes_service" "ingress_controller" {
   depends_on = [helm_release.nginx_ingress]
 }
 
-# Install ArgoCD
+# Create ArgoCD namespace
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
+  depends_on = [google_container_cluster.gke]
+}
+
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -178,14 +192,246 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
 
+  # Server configuration
+  set {
+    name  = "server.service.type"
+    value = "LoadBalancer"
+  }
+
+  # Disable ingress temporarily
+  set {
+    name  = "server.ingress.enabled"
+    value = "false"
+  }
+
+  # Enable insecure mode
+  set {
+    name  = "server.extraArgs[0]"
+    value = "--insecure"
+  }
+
+  # Resource limits for server - reduced
+  set {
+    name  = "server.resources.limits.cpu"
+    value = "200m"
+  }
+
+  set {
+    name  = "server.resources.limits.memory"
+    value = "256Mi"
+  }
+
+  set {
+    name  = "server.resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "server.resources.requests.memory"
+    value = "128Mi"
+  }
+
+  # Controller configuration - reduced
+  set {
+    name  = "controller.resources.limits.cpu"
+    value = "200m"
+  }
+
+  set {
+    name  = "controller.resources.limits.memory"
+    value = "256Mi"
+  }
+
+  set {
+    name  = "controller.resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "controller.resources.requests.memory"
+    value = "128Mi"
+  }
+
+  # Redis configuration - reduced
+  set {
+    name  = "redis.resources.limits.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "redis.resources.limits.memory"
+    value = "128Mi"
+  }
+
+  set {
+    name  = "redis.resources.requests.cpu"
+    value = "50m"
+  }
+
+  set {
+    name  = "redis.resources.requests.memory"
+    value = "64Mi"
+  }
+
+  # Repo server configuration - reduced
+  set {
+    name  = "repoServer.resources.limits.cpu"
+    value = "200m"
+  }
+
+  set {
+    name  = "repoServer.resources.limits.memory"
+    value = "256Mi"
+  }
+
+  set {
+    name  = "repoServer.resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "repoServer.resources.requests.memory"
+    value = "128Mi"
+  }
+
+  # Enable ApplicationSet controller
+  set {
+    name  = "applicationSet.enabled"
+    value = "true"
+  }
+
+  # Enable notifications controller
+  set {
+    name  = "notifications.enabled"
+    value = "true"
+  }
+
+  depends_on = [
+    kubernetes_namespace.argocd,
+    google_container_node_pool.node_pool,
+    helm_release.nginx_ingress
+  ]
+}
+
+# Install Prometheus
+resource "helm_release" "prometheus" {
+  name             = "prometheus"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  chart            = "prometheus"
+  namespace        = "monitoring"
+  create_namespace = true
+
   set {
     name  = "server.service.type"
     value = "ClusterIP"
   }
 
+  # Optimize Prometheus server resources
+  set {
+    name  = "server.resources.limits.cpu"
+    value = "200m"
+  }
+
+  set {
+    name  = "server.resources.limits.memory"
+    value = "256Mi"
+  }
+
+  set {
+    name  = "server.resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "server.resources.requests.memory"
+    value = "128Mi"
+  }
+
+  # Optimize node-exporter resources
+  set {
+    name  = "nodeExporter.resources.limits.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "nodeExporter.resources.limits.memory"
+    value = "128Mi"
+  }
+
+  set {
+    name  = "nodeExporter.resources.requests.cpu"
+    value = "50m"
+  }
+
+  set {
+    name  = "nodeExporter.resources.requests.memory"
+    value = "64Mi"
+  }
+
   depends_on = [
     google_container_node_pool.node_pool
   ]
+}
+
+# Install Grafana
+resource "helm_release" "grafana" {
+  name             = "grafana"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "grafana"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "service.type"
+    value = "ClusterIP"
+  }
+
+  set {
+    name  = "persistence.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "adminPassword"
+    value = var.grafana_admin_password
+  }
+
+  # Optimize Grafana resources
+  set {
+    name  = "resources.limits.cpu"
+    value = "200m"
+  }
+
+  set {
+    name  = "resources.limits.memory"
+    value = "256Mi"
+  }
+
+  set {
+    name  = "resources.requests.cpu"
+    value = "100m"
+  }
+
+  set {
+    name  = "resources.requests.memory"
+    value = "128Mi"
+  }
+
+  depends_on = [
+    google_container_node_pool.node_pool,
+    helm_release.prometheus
+  ]
+}
+
+resource "kubernetes_secret" "grafana_admin" {
+  metadata {
+    name      = "grafana-admin"
+    namespace = "monitoring"
+  }
+  type = "Opaque"
+  data = {
+    admin_password = base64encode(var.grafana_admin_password)
+  }
 }
 
 locals {
@@ -194,30 +440,12 @@ locals {
     "secret.yaml",
     "service-db.yaml",
     "statefulset-db.yaml",
+
     "be/service-backend.yaml",
     "be/deployment-backend.yaml",
+
     "fe/service-frontend.yaml",
     "fe/deployment-frontend.yaml",
-    "argocd-install.yaml",
-    "argocd-install-rendered.yaml",
-  ]
-
-  argocd_manifests = [
-    "argocd-configs/00-namespace.yaml",
-    "argocd-configs/01-thesis-project.yaml",
-    "argocd-configs/02-github-repo-secret.yaml",
-    "argocd-configs/03-frontend-application.yaml",
-    "argocd-configs/04-backend-application.yaml",
-  ]
-}
-
-resource "kubectl_manifest" "argocd_resources" {
-  for_each  = { for idx, file in local.argocd_manifests : file => idx }
-  yaml_body = file(each.key)
-  depends_on = [
-    kubernetes_namespace.my_thesis,
-    kubernetes_secret.ghcr_secret,
-    helm_release.argocd,
   ]
 }
 
@@ -231,6 +459,29 @@ resource "kubectl_manifest" "k8s_resources" {
   ]
 }
 
+# Data source to get the Grafana external IP
+data "kubernetes_service" "grafana" {
+  metadata {
+    name      = "grafana"
+    namespace = "monitoring"
+  }
+  depends_on = [helm_release.grafana]
+}
+
+resource "kubectl_manifest" "argocd_apps" {
+  for_each = {
+    backend  = file("${path.module}/be/backend-application.yaml")
+    frontend = file("${path.module}/fe/frontend-application.yaml")
+  }
+
+  yaml_body = each.value
+
+  depends_on = [
+    helm_release.argocd,
+    kubernetes_namespace.my_thesis
+  ]
+}
+
 output "cluster_endpoint" {
   value = google_container_cluster.gke.endpoint
 }
@@ -238,4 +489,14 @@ output "cluster_endpoint" {
 output "ingress_controller_ip" {
   value       = data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip
   description = "External IP address of the Nginx Ingress Controller"
+}
+
+output "grafana_endpoint" {
+  value       = "http://${data.kubernetes_service.grafana.metadata[0].name}.${data.kubernetes_service.grafana.metadata[0].namespace}.svc.cluster.local:8888"
+  description = "Internal ClusterIP endpoint for Grafana"
+}
+
+output "argocd_ingress_ip" {
+  value       = data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip
+  description = "External IP address for accessing ArgoCD UI"
 }

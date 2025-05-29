@@ -49,3 +49,33 @@ variable "ghcr_token" {
   type        = string
   sensitive   = true
 }
+
+variable "grafana_admin_password" {
+  description = "Admin password for Grafana"
+  type        = string
+  sensitive   = true
+}
+
+variable "argocd_hostname" {
+  description = "The hostname for ArgoCD UI access"
+  type        = string
+}
+
+variable "argocd_admin_password" {
+  description = "Admin password for ArgoCD"
+  type        = string
+  sensitive   = true
+  default     = "argocd123!"
+}
+
+variable "github_username" {
+  description = "GitHub username"
+  type        = string
+  default     = "tpSpace"
+}
+
+variable "github_token" {
+  description = "GitHub token for ArgoCD repository access"
+  type        = string
+  sensitive   = true
+}

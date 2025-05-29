@@ -3,6 +3,9 @@ kind: Deployment
 metadata:
   name: backend
   namespace: my-thesis
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "4000"
 spec:
   replicas: 1
   selector:
@@ -12,6 +15,9 @@ spec:
     metadata:
       labels:
         app: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4000"
     spec:
       containers:
         - name: backend
@@ -42,6 +48,28 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: DATASOURCE_URL
+            - name: ROLE_ADMIN_CODE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ROLE_ADMIN_CODE
+            - name: ROLE_TEACHER_CODE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ROLE_TEACHER_CODE
+            - name: ROLE_STUDENT_CODE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ROLE_STUDENT_CODE
+            - name: CLIENT_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: CLIENT_ORIGIN
+            - name: PORT
+              value: "4000"
           resources:
             limits:
               cpu: "500m"

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: my-thesis
+data:
+  init.sql: |
+    -- Create extensions if needed
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+    -- Set timezone
+    SET timezone = 'UTC';
+
+    -- Create schema if not exists
+    CREATE SCHEMA IF NOT EXISTS public;
+
+    -- Grant privileges
+    GRANT ALL ON SCHEMA public TO postgres;
+    GRANT ALL ON SCHEMA public TO public;
+
+    -- Set connection parameters
+    ALTER SYSTEM SET max_connections = '100';
+    ALTER SYSTEM SET shared_buffers = '256MB';
+    ALTER SYSTEM SET effective_cache_size = '768MB';
+    ALTER SYSTEM SET maintenance_work_mem = '64MB';
+    ALTER SYSTEM SET checkpoint_completion_target = '0.9';
+    ALTER SYSTEM SET wal_buffers = '16MB';
+    ALTER SYSTEM SET default_statistics_target = '100';
+    ALTER SYSTEM SET random_page_cost = '1.1';
+    ALTER SYSTEM SET effective_io_concurrency = '200';
+    ALTER SYSTEM SET work_mem = '4MB';
+    ALTER SYSTEM SET min_wal_size = '1GB';
+    ALTER SYSTEM SET max_wal_size = '4GB';
+
+    -- Enable connection pooling
+    ALTER SYSTEM SET max_prepared_transactions = '100';
+    ALTER SYSTEM SET idle_in_transaction_session_timeout = '10min';

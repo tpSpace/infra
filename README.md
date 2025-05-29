@@ -79,3 +79,22 @@ NNNISSqQcReG9vKc
 ```bash
 kubectl rollout restart deployment -l app.kubernetes.io/part-of=argocd -n argocd
 ```
+
+## Installation on GCP
+
+1. Create Project then create service account
+2. Donwload Service Account credentials.json
+3. Delete unecessasry files such as terrform.tfstate, .terraform.tfstate.lock.info, etc any files related temp files.
+4. Also login to gcloud.
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+## Get all services & ip type
+
+```bash
+ kubectl get svc --all-namespaces -o wide
+```
