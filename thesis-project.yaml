@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: thesis
+  namespace: argocd
+spec:
+  description: Thesis Project for Frontend and Backend Applications
+  sourceRepos:
+    - git@github.com:tpSpace/infra.git
+  destinations:
+    - namespace: my-thesis
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

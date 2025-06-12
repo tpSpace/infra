@@ -225,8 +225,8 @@ data:
   ROLE_ADMIN_CODE: "1"
   ROLE_TEACHER_CODE: "2"
   ROLE_STUDENT_CODE: "3"
-  NEXT_PUBLIC_GRAPHQL_URI: "http://34.92.234.88:4000/graphql"
-  BACKEND_URL: "http://34.92.234.88:4000/graphql"
+  NEXT_PUBLIC_GRAPHQL_URI: "http://34.96.244.61:4000/graphql"
+  BACKEND_URL: "http://34.96.244.61:4000/graphql"
 ```
 
 **Database Credentials Secret (`secret.yaml`):**

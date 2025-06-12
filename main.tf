@@ -387,6 +387,11 @@ resource "helm_release" "grafana" {
   }
 
   set {
+    name  = "service.port"
+    value = "9999"
+  }
+
+  set {
     name  = "persistence.enabled"
     value = "true"
   }
@@ -446,6 +451,9 @@ locals {
 
     "fe/service-frontend.yaml",
     "fe/deployment-frontend.yaml",
+
+    "thesis-project.yaml",
+    "github-repo-secret.yaml",
   ]
 }
 

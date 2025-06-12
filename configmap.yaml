@@ -6,10 +6,10 @@ metadata:
 data:
   DATABASE_HOST: postgres
   DATABASE_PORT: "5432"
-  DATASOURCE_URL: "postgresql://postgres:conghoaxa@postgres:5432/thesisdb"
+  DATASOURCE_URL: "postgresql://postgres:conghoaxa@postgres-headless.my-thesis.svc.cluster.local:5432/thesisdb?sslmode=disable"
   ROLE_ADMIN_CODE: "1"
   ROLE_TEACHER_CODE: "2"
   ROLE_STUDENT_CODE: "3"
-  CLIENT_ORIGIN: "http://34.96.173.121/"
-  NEXT_PUBLIC_GRAPHQL_URI: "http://34.92.234.88:4000/graphql"
-  BACKEND_URL: "http://34.92.234.88:4000/graphql"
+  CLIENT_ORIGIN: "http://34.150.28.208/"
+  NEXT_PUBLIC_GRAPHQL_URI: "http://34.96.244.61:4000/graphql"
+  BACKEND_URL: "http://34.96.244.61:4000/graphql"

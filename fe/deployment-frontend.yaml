@@ -24,6 +24,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: NEXT_PUBLIC_GRAPHQL_URI
+            - name: BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: BACKEND_URL
           resources:
             limits:
               cpu: "500m"
