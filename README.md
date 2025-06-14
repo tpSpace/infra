@@ -98,3 +98,25 @@ terraform apply
 ```bash
  kubectl get svc --all-namespaces -o wide
 ```
+
+## How to reroll a pod
+
+```bash
+   kubectl get pods -n my-thesis -l app=postgres
+```
+
+```bash
+   kubectl exec -it <pod-name> -n my-thesis -- bash
+```
+
+```bash
+   kubectl exec -it <pod-name> -n my-thesis -- sh
+```
+
+```bash
+   psql -U postgres
+```
+
+```bash
+   kubectl rollout restart deployment frontend -n my-thesis
+```

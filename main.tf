@@ -452,6 +452,7 @@ locals {
     "fe/service-frontend.yaml",
     "fe/deployment-frontend.yaml",
 
+    "ingress.yaml",
     "thesis-project.yaml",
     "github-repo-secret.yaml",
   ]
@@ -507,4 +508,13 @@ output "grafana_endpoint" {
 output "argocd_ingress_ip" {
   value       = data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip
   description = "External IP address for accessing ArgoCD UI"
+}
+
+output "application_urls" {
+  value = {
+    frontend_url = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/app"
+    backend_url  = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api"
+    root_url     = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}"
+  }
+  description = "URLs to access your applications via ingress"
 }

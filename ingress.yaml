@@ -1,4 +1,3 @@
-# filepath: /home/khoi/thesis/config/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -10,14 +9,21 @@ spec:
   rules:
     - http:
         paths:
-          - path: /api(/|$)(.*)
+          - path: /api
             pathType: Prefix
             backend:
               service:
                 name: backend
                 port:
                   number: 4000
-          - path: /app(/|$)(.*)
+          - path: /app
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+          - path: /
             pathType: Prefix
             backend:
               service:
