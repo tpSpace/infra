@@ -1,8 +1,12 @@
-# infra
+# Thesis Infrastructure Repository
 
-## Overview
+## 📚 Complete Documentation
 
-This repository contains the infrastructure configuration for the thesis project, including Kubernetes manifests for backend and frontend services.
+**👉 For comprehensive setup and usage instructions, see: [COMPLETE-THESIS-INFRASTRUCTURE-GUIDE.md](./COMPLETE-THESIS-INFRASTRUCTURE-GUIDE.md)**
+
+## Quick Overview
+
+This repository contains the infrastructure configuration for the thesis project, implementing GitOps principles with ArgoCD for automated deployment of frontend and backend services.
 
 ## Services
 

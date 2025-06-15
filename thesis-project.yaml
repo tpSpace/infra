@@ -7,6 +7,8 @@ spec:
   description: Thesis Project for Frontend and Backend Applications
   sourceRepos:
     - git@github.com:tpSpace/infra.git
+    - git@github.com:tpSpace/thesis-fe.git
+    - git@github.com:tpSpace/thesis-be.git
   destinations:
     - namespace: my-thesis
       server: https://kubernetes.default.svc

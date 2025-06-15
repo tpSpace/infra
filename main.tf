@@ -50,7 +50,7 @@ resource "google_container_node_pool" "node_pool" {
 
   autoscaling {
     min_node_count = 2
-    max_node_count = 5
+    max_node_count = 7
   }
   management {
     auto_upgrade = true
@@ -446,13 +446,9 @@ locals {
     "secret.yaml",
     "service-db.yaml",
     "statefulset-db.yaml",
-
-    "be/service-backend.yaml",
-    "be/deployment-backend.yaml",
-
-    "fe/service-frontend.yaml",
-    "fe/deployment-frontend.yaml",
-
+    "postgres-init-configmap.yaml",
+    # "rabbit.yaml",
+    # "rabbitmq-secret.yaml",
     "ingress.yaml",
     "thesis-project.yaml",
   ]
@@ -498,6 +494,8 @@ resource "kubectl_manifest" "argocd_apps" {
     helm_release.argocd,
     kubernetes_namespace.my_thesis,
     kubectl_manifest.github_repo_creds,
+    kubectl_manifest.argocd_fe_repo_creds,
+    kubectl_manifest.argocd_be_repo_creds,
     kubectl_manifest.argocd_ssh_known_hosts
   ]
 }
@@ -514,6 +512,23 @@ resource "kubectl_manifest" "argocd_ssh_known_hosts" {
 # GitHub repository credentials secret for ArgoCD (SSH)
 resource "kubectl_manifest" "github_repo_creds" {
   yaml_body = file("${path.module}/github-ssh-repo-secret.yaml")
+
+  depends_on = [
+    kubernetes_namespace.argocd
+  ]
+}
+
+# SSH repository credentials for application repos
+resource "kubectl_manifest" "argocd_fe_repo_creds" {
+  yaml_body = file("${path.module}/argocd-fe-repo-config.yaml")
+
+  depends_on = [
+    kubernetes_namespace.argocd
+  ]
+}
+
+resource "kubectl_manifest" "argocd_be_repo_creds" {
+  yaml_body = file("${path.module}/argocd-be-repo-config.yaml")
 
   depends_on = [
     kubernetes_namespace.argocd

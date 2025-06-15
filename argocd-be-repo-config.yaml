@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-be-repo-config
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: git@github.com:tpSpace/thesis-be.git
+  sshPrivateKey: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    QyNTUxOQAAACBFQKBXOig5egmskNGGXGTHAjvvDipzMv87nt5A6a5FswAAAJjzIlBQ8yJQ
+    UAAAAAtzc2gtZWQyNTUxOQAAACBFQKBXOig5egmskNGGXGTHAjvvDipzMv87nt5A6a5Fsw
+    AAAEDF6kk3iD6u41d2s3suAixkVZ0iBfOalxFwFACCwA4foEVAoFc6KDl6CayQ0YZcZMcC
+    O+8OKnMy/zue3kDprkWzAAAAEGFyZ29jZC1iZS1hY2Nlc3MBAgMEBQ==
+    -----END OPENSSH PRIVATE KEY-----
+  revision: main

@@ -6,9 +6,9 @@ metadata:
 spec:
   project: thesis
   source:
-    repoURL: git@github.com:tpSpace/infra.git
+    repoURL: git@github.com:tpSpace/thesis-fe.git
     targetRevision: main
-    path: fe
+    path: k8s
   destination:
     server: https://kubernetes.default.svc
     namespace: my-thesis
