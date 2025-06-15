@@ -107,6 +107,7 @@ terraform apply
 
 ```bash
    kubectl exec -it <pod-name> -n my-thesis -- bash
+   kubectl exec -it frontend-748bd554d8-28t8s -n my-thesis -- sh
 ```
 
 ```bash
@@ -120,3 +121,5 @@ terraform apply
 ```bash
    kubectl rollout restart deployment frontend -n my-thesis
 ```
+
+<!-- Unable to load data: error getting cached app managed resources: InvalidSpecError: application repo git@github.com:tpSpace/infra.git is not permitted in project 'thesis' -->

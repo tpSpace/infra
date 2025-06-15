@@ -59,6 +59,7 @@ variable "grafana_admin_password" {
 variable "argocd_hostname" {
   description = "The hostname for ArgoCD UI access"
   type        = string
+  default     = "argocd.local"
 }
 
 variable "argocd_admin_password" {
