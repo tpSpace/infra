@@ -300,16 +300,17 @@ resource "helm_release" "argocd" {
     value = "true"
   }
 
-  # Enable notifications controller
+  # Set ArgoCD admin password (bcrypt hash)
   set {
-    name  = "notifications.enabled"
-    value = "true"
+    name  = "server.adminPassword"
+    value = var.argocd_admin_password
   }
 
   depends_on = [
     kubernetes_namespace.argocd,
     google_container_node_pool.node_pool,
-    helm_release.nginx_ingress
+    helm_release.nginx_ingress,
+    kubectl_manifest.argocd_ssh_known_hosts
   ]
 }
 
@@ -323,7 +324,7 @@ resource "helm_release" "prometheus" {
 
   set {
     name  = "server.service.type"
-    value = "ClusterIP"
+    value = "LoadBalancer"
   }
 
   # Optimize Prometheus server resources
@@ -383,7 +384,7 @@ resource "helm_release" "grafana" {
 
   set {
     name  = "service.type"
-    value = "ClusterIP"
+    value = "LoadBalancer"
   }
 
   set {
@@ -454,7 +455,6 @@ locals {
 
     "ingress.yaml",
     "thesis-project.yaml",
-    "github-repo-secret.yaml",
   ]
 }
 
@@ -477,6 +477,15 @@ data "kubernetes_service" "grafana" {
   depends_on = [helm_release.grafana]
 }
 
+# Data source to get the Prometheus external IP
+data "kubernetes_service" "prometheus" {
+  metadata {
+    name      = "prometheus-server"
+    namespace = "monitoring"
+  }
+  depends_on = [helm_release.prometheus]
+}
+
 resource "kubectl_manifest" "argocd_apps" {
   for_each = {
     backend  = file("${path.module}/be/backend-application.yaml")
@@ -487,7 +496,27 @@ resource "kubectl_manifest" "argocd_apps" {
 
   depends_on = [
     helm_release.argocd,
-    kubernetes_namespace.my_thesis
+    kubernetes_namespace.my_thesis,
+    kubectl_manifest.github_repo_creds,
+    kubectl_manifest.argocd_ssh_known_hosts
+  ]
+}
+
+# SSH known hosts secret for ArgoCD
+resource "kubectl_manifest" "argocd_ssh_known_hosts" {
+  yaml_body = file("${path.module}/ssh-known-hosts-secret.yaml")
+
+  depends_on = [
+    kubernetes_namespace.argocd
+  ]
+}
+
+# GitHub repository credentials secret for ArgoCD (SSH)
+resource "kubectl_manifest" "github_repo_creds" {
+  yaml_body = file("${path.module}/github-ssh-repo-secret.yaml")
+
+  depends_on = [
+    kubernetes_namespace.argocd
   ]
 }
 
@@ -501,8 +530,13 @@ output "ingress_controller_ip" {
 }
 
 output "grafana_endpoint" {
-  value       = "http://${data.kubernetes_service.grafana.metadata[0].name}.${data.kubernetes_service.grafana.metadata[0].namespace}.svc.cluster.local:8888"
-  description = "Internal ClusterIP endpoint for Grafana"
+  value       = "http://${data.kubernetes_service.grafana.status.0.load_balancer.0.ingress.0.ip}:9999"
+  description = "External LoadBalancer endpoint for Grafana"
+}
+
+output "prometheus_endpoint" {
+  value       = "http://${data.kubernetes_service.prometheus.status.0.load_balancer.0.ingress.0.ip}"
+  description = "External LoadBalancer endpoint for Prometheus"
 }
 
 output "argocd_ingress_ip" {
@@ -512,9 +546,11 @@ output "argocd_ingress_ip" {
 
 output "application_urls" {
   value = {
-    frontend_url = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/app"
-    backend_url  = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api"
-    root_url     = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}"
+    frontend_url   = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/app"
+    backend_url    = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api"
+    root_url       = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}"
+    grafana_url    = "http://${data.kubernetes_service.grafana.status.0.load_balancer.0.ingress.0.ip}:9999"
+    prometheus_url = "http://${data.kubernetes_service.prometheus.status.0.load_balancer.0.ingress.0.ip}"
   }
-  description = "URLs to access your applications via ingress"
+  description = "URLs to access your applications and monitoring tools via LoadBalancer"
 }

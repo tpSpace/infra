@@ -1,18 +1,20 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: github-repo-creds
+  name: github-repo-config
   namespace: argocd
   labels:
     argocd.argoproj.io/secret-type: repository
+type: Opaque
 stringData:
   type: git
   url: git@github.com:tpSpace/infra.git
   sshPrivateKey: |
     -----BEGIN OPENSSH PRIVATE KEY-----
     b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-    QyNTUxOQAAACBVdlZJAAvq7RpCzkqY+ri7mAPuYcgu0VmMZP1gwHC48wAAAJh/4jkBf+I5
-    AQAAAAtzc2gtZWQyNTUxOQAAACBVdlZJAAvq7RpCzkqY+ri7mAPuYcgu0VmMZP1gwHC48w
-    AAAEAtwdr8OJvp6vFo2/cQC71omIFeUMOL9UMrxixCg8l0K1V2VkkAC+rtGkLOSpj6uLuY
-    A+5hyC7RWYxk/WDAcLjzAAAADmFyZ28tY2QtYWNjZXNzAQIDBAUGBw==
+    QyNTUxOQAAACDxUGiJiX/kJk120IF5Z+5Gt1PPrO3ujjXA2kZxKd9aAAAAAJh2qg1VdqoN
+    VQAAAAtzc2gtZWQyNTUxOQAAACDxUGiJiX/kJk120IF5Z+5Gt1PPrO3ujjXA2kZxKd9aAA
+    AAAEAmYx6NLw9fTitt9HTb28xUQHDIU8gYtvwJyiJJCdsn7vFQaImJf+QmTXbQgXln7ka3
+    U8+s7e6ONcDaRnEp31oAAAAAFGFyZ29jZC1naXRodWItYWNjZXNzAQ==
     -----END OPENSSH PRIVATE KEY-----
+  revision: master
