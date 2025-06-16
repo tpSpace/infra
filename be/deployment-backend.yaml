@@ -22,6 +22,7 @@ spec:
       containers:
         - name: backend
           image: ghcr.io/tpspace/thesis-be:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 4000
           envFrom:

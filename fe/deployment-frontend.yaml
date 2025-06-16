@@ -12,10 +12,14 @@ spec:
     metadata:
       labels:
         app: frontend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
     spec:
       containers:
         - name: frontend
           image: ghcr.io/tpspace/thesis-fe:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
