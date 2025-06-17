@@ -12,7 +12,6 @@ variable "region" {
 variable "cluster_name" {
   description = "Name of the GKE cluster"
   type        = string
-  default     = "thesis-cluster"
 }
 
 variable "node_count" {
@@ -79,4 +78,10 @@ variable "github_token" {
   description = "GitHub token for ArgoCD repository access"
   type        = string
   sensitive   = true
+}
+
+variable "ingress_ip" {
+  description = "Static IP address for the Ingress"
+  type        = string
+  default     = ""
 }

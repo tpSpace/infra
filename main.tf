@@ -49,8 +49,8 @@ resource "google_container_node_pool" "node_pool" {
   location = google_container_cluster.gke.location
 
   autoscaling {
-    min_node_count = 2
-    max_node_count = 7
+    min_node_count = 1
+    max_node_count = 6
   }
   management {
     auto_upgrade = true
@@ -58,7 +58,7 @@ resource "google_container_node_pool" "node_pool" {
   }
 
   node_config {
-    machine_type = "e2-medium"
+    machine_type = "e2-medium" # 2 vCPU, 8GB RAM
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     disk_size_gb = 30
     disk_type    = "pd-ssd"
@@ -68,28 +68,34 @@ resource "google_container_node_pool" "node_pool" {
   depends_on = [google_container_cluster.gke]
 }
 
+# Wait for cluster to be fully ready
+resource "time_sleep" "wait_for_cluster" {
+  depends_on      = [google_container_node_pool.node_pool]
+  create_duration = "60s"
+}
+
 data "google_client_config" "default" {
   provider = google
 }
 
 provider "kubernetes" {
-  host                   = "https://${google_container_cluster.gke.endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
+  # Use config file primarily
+  config_path    = "~/.kube/config"
+  config_context = "gke_${var.project_id}_${var.region}_${var.cluster_name}"
 }
 
 provider "kubectl" {
-  host                   = "https://${google_container_cluster.gke.endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
-  load_config_file       = false
+  # Use config file primarily
+  config_path      = "~/.kube/config"
+  config_context   = "gke_${var.project_id}_${var.region}_${var.cluster_name}"
+  load_config_file = true
 }
 
 provider "helm" {
   kubernetes {
-    host                   = "https://${google_container_cluster.gke.endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
+    # Use config file primarily
+    config_path    = "~/.kube/config"
+    config_context = "gke_${var.project_id}_${var.region}_${var.cluster_name}"
   }
 }
 
@@ -97,7 +103,9 @@ resource "kubernetes_namespace" "my_thesis" {
   metadata {
     name = "my-thesis"
   }
-  depends_on = [google_container_cluster.gke]
+  depends_on = [
+    time_sleep.wait_for_cluster
+  ]
 }
 
 resource "kubernetes_secret" "ghcr_secret" {
@@ -117,6 +125,11 @@ resource "kubernetes_secret" "ghcr_secret" {
       }
     })
   }
+
+  depends_on = [
+    kubernetes_namespace.my_thesis,
+    time_sleep.wait_for_cluster
+  ]
 }
 
 # Install Nginx Ingress Controller
@@ -164,7 +177,7 @@ resource "helm_release" "nginx_ingress" {
   }
 
   depends_on = [
-    google_container_node_pool.node_pool
+    time_sleep.wait_for_cluster
   ]
 }
 
@@ -177,12 +190,20 @@ data "kubernetes_service" "ingress_controller" {
   depends_on = [helm_release.nginx_ingress]
 }
 
+# Wait for ingress controller to get external IP
+resource "time_sleep" "wait_for_ingress_ip" {
+  depends_on      = [data.kubernetes_service.ingress_controller]
+  create_duration = "30s"
+}
+
 # Create ArgoCD namespace
 resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
   }
-  depends_on = [google_container_cluster.gke]
+  depends_on = [
+    time_sleep.wait_for_cluster
+  ]
 }
 
 resource "helm_release" "argocd" {
@@ -210,49 +231,49 @@ resource "helm_release" "argocd" {
     value = "--insecure"
   }
 
-  # Resource limits for server - reduced
+  # Resource limits for server - Increased for stability
   set {
     name  = "server.resources.limits.cpu"
-    value = "200m"
+    value = "500m"
   }
 
   set {
     name  = "server.resources.limits.memory"
-    value = "256Mi"
+    value = "1Gi"
   }
 
   set {
     name  = "server.resources.requests.cpu"
-    value = "100m"
+    value = "250m"
   }
 
   set {
     name  = "server.resources.requests.memory"
-    value = "128Mi"
+    value = "256Mi"
   }
 
-  # Controller configuration - reduced
+  # Controller configuration - Increased memory for stability
   set {
     name  = "controller.resources.limits.cpu"
-    value = "200m"
+    value = "1000m"
   }
 
   set {
     name  = "controller.resources.limits.memory"
-    value = "256Mi"
+    value = "2Gi"
   }
 
   set {
     name  = "controller.resources.requests.cpu"
-    value = "100m"
+    value = "200m"
   }
 
   set {
     name  = "controller.resources.requests.memory"
-    value = "128Mi"
+    value = "512Mi"
   }
 
-  # Redis configuration - reduced
+  # Redis configuration - conservative
   set {
     name  = "redis.resources.limits.cpu"
     value = "100m"
@@ -273,25 +294,25 @@ resource "helm_release" "argocd" {
     value = "64Mi"
   }
 
-  # Repo server configuration - reduced
+  # Repo server configuration - Increase memory
   set {
     name  = "repoServer.resources.limits.cpu"
-    value = "200m"
+    value = "200m" # Increase from 100m
   }
 
   set {
     name  = "repoServer.resources.limits.memory"
-    value = "256Mi"
+    value = "1Gi"
   }
 
   set {
     name  = "repoServer.resources.requests.cpu"
-    value = "100m"
+    value = "100m" # Increase from 50m
   }
 
   set {
     name  = "repoServer.resources.requests.memory"
-    value = "128Mi"
+    value = "512Mi"
   }
 
   # Enable ApplicationSet controller
@@ -308,9 +329,7 @@ resource "helm_release" "argocd" {
 
   depends_on = [
     kubernetes_namespace.argocd,
-    google_container_node_pool.node_pool,
-    helm_release.nginx_ingress,
-    kubectl_manifest.argocd_ssh_known_hosts
+    time_sleep.wait_for_cluster
   ]
 }
 
@@ -327,7 +346,7 @@ resource "helm_release" "prometheus" {
     value = "LoadBalancer"
   }
 
-  # Optimize Prometheus server resources
+  # Conservative Prometheus server resources
   set {
     name  = "server.resources.limits.cpu"
     value = "200m"
@@ -335,7 +354,7 @@ resource "helm_release" "prometheus" {
 
   set {
     name  = "server.resources.limits.memory"
-    value = "256Mi"
+    value = "512Mi"
   }
 
   set {
@@ -345,10 +364,10 @@ resource "helm_release" "prometheus" {
 
   set {
     name  = "server.resources.requests.memory"
-    value = "128Mi"
+    value = "256Mi"
   }
 
-  # Optimize node-exporter resources
+  # Conservative node-exporter resources
   set {
     name  = "nodeExporter.resources.limits.cpu"
     value = "100m"
@@ -356,21 +375,21 @@ resource "helm_release" "prometheus" {
 
   set {
     name  = "nodeExporter.resources.limits.memory"
-    value = "128Mi"
+    value = "64Mi"
   }
 
   set {
     name  = "nodeExporter.resources.requests.cpu"
-    value = "50m"
+    value = "25m"
   }
 
   set {
     name  = "nodeExporter.resources.requests.memory"
-    value = "64Mi"
+    value = "32Mi"
   }
 
   depends_on = [
-    google_container_node_pool.node_pool
+    time_sleep.wait_for_cluster
   ]
 }
 
@@ -394,7 +413,7 @@ resource "helm_release" "grafana" {
 
   set {
     name  = "persistence.enabled"
-    value = "true"
+    value = "false"
   }
 
   set {
@@ -402,29 +421,29 @@ resource "helm_release" "grafana" {
     value = var.grafana_admin_password
   }
 
-  # Optimize Grafana resources
+  # Conservative Grafana resources
   set {
     name  = "resources.limits.cpu"
-    value = "200m"
-  }
-
-  set {
-    name  = "resources.limits.memory"
-    value = "256Mi"
-  }
-
-  set {
-    name  = "resources.requests.cpu"
     value = "100m"
   }
 
   set {
-    name  = "resources.requests.memory"
+    name  = "resources.limits.memory"
     value = "128Mi"
   }
 
+  set {
+    name  = "resources.requests.cpu"
+    value = "50m"
+  }
+
+  set {
+    name  = "resources.requests.memory"
+    value = "64Mi"
+  }
+
   depends_on = [
-    google_container_node_pool.node_pool,
+    time_sleep.wait_for_cluster,
     helm_release.prometheus
   ]
 }
@@ -438,29 +457,43 @@ resource "kubernetes_secret" "grafana_admin" {
   data = {
     admin_password = base64encode(var.grafana_admin_password)
   }
+
+  depends_on = [
+    helm_release.prometheus,
+    helm_release.grafana
+  ]
 }
 
 locals {
   k8s_manifests = [
     "configmap.yaml",
     "secret.yaml",
-    "service-db.yaml",
-    "statefulset-db.yaml",
-    "postgres-init-configmap.yaml",
-    # "rabbit.yaml",
-    # "rabbitmq-secret.yaml",
+
+    "postgres-0/service-db.yaml",
+    "postgres-0/statefulset-db.yaml",
+    "postgres-0/postgres-init-configmap.yaml",
+
+    # "rabbitmq/rabbit.yaml",
+    # "rabbitmq/rabbitmq-secret.yaml",
+
     "ingress.yaml",
-    "thesis-project.yaml",
+    "argocd/thesis-project.yaml",
   ]
 }
 
 resource "kubectl_manifest" "k8s_resources" {
-  for_each  = { for idx, file in local.k8s_manifests : file => idx }
-  yaml_body = file(each.key)
+  for_each = { for idx, file in local.k8s_manifests : file => idx }
+  yaml_body = each.key == "configmap.yaml" ? templatefile(each.key, {
+    ingress_ip  = data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip
+    db_username = var.db_username
+    db_password = var.db_password
+    db_name     = var.db_name
+  }) : file(each.key)
   depends_on = [
     kubernetes_namespace.my_thesis,
     kubernetes_secret.ghcr_secret,
-    # helm_release.nginx_ingress,
+    helm_release.nginx_ingress,
+    time_sleep.wait_for_ingress_ip
   ]
 }
 
@@ -496,44 +529,74 @@ resource "kubectl_manifest" "argocd_apps" {
     kubectl_manifest.github_repo_creds,
     kubectl_manifest.argocd_fe_repo_creds,
     kubectl_manifest.argocd_be_repo_creds,
-    kubectl_manifest.argocd_ssh_known_hosts
+    kubectl_manifest.argocd_ssh_known_hosts,
+    kubectl_manifest.k8s_resources
   ]
 }
 
 # SSH known hosts secret for ArgoCD
 resource "kubectl_manifest" "argocd_ssh_known_hosts" {
-  yaml_body = file("${path.module}/ssh-known-hosts-secret.yaml")
+  yaml_body = file("${path.module}/argocd/ssh-known-hosts-secret.yaml")
 
   depends_on = [
-    kubernetes_namespace.argocd
+    kubernetes_namespace.argocd,
+    helm_release.argocd
   ]
 }
 
 # GitHub repository credentials secret for ArgoCD (SSH)
 resource "kubectl_manifest" "github_repo_creds" {
-  yaml_body = file("${path.module}/github-ssh-repo-secret.yaml")
+  yaml_body = file("${path.module}/argocd/github-ssh-repo-secret.yaml")
 
   depends_on = [
-    kubernetes_namespace.argocd
+    kubernetes_namespace.argocd,
+    helm_release.argocd
   ]
 }
 
 # SSH repository credentials for application repos
 resource "kubectl_manifest" "argocd_fe_repo_creds" {
-  yaml_body = file("${path.module}/argocd-fe-repo-config.yaml")
+  yaml_body = file("${path.module}/argocd/argocd-fe-repo-config.yaml")
 
   depends_on = [
-    kubernetes_namespace.argocd
+    kubernetes_namespace.argocd,
+    helm_release.argocd
   ]
 }
 
 resource "kubectl_manifest" "argocd_be_repo_creds" {
-  yaml_body = file("${path.module}/argocd-be-repo-config.yaml")
+  yaml_body = file("${path.module}/argocd/argocd-be-repo-config.yaml")
 
   depends_on = [
-    kubernetes_namespace.argocd
+    kubernetes_namespace.argocd,
+    helm_release.argocd
   ]
 }
+
+# Alternative approach: Dedicated ConfigMap resource
+# resource "kubernetes_config_map" "app_config" {
+#   metadata {
+#     name      = "app-config"
+#     namespace = "my-thesis"
+#   }
+#
+#   data = {
+#     DATABASE_HOST               = "postgres"
+#     DATABASE_PORT              = "5432"
+#     DATASOURCE_URL             = "postgresql://${var.db_username}:${var.db_password}@postgres-headless.my-thesis.svc.cluster.local:5432/${var.db_name}?sslmode=disable"
+#     ROLE_ADMIN_CODE            = "1"
+#     ROLE_TEACHER_CODE          = "2"
+#     ROLE_STUDENT_CODE          = "3"
+#     CLIENT_ORIGIN              = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/app"
+#     NEXT_PUBLIC_GRAPHQL_URI    = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api/graphql"
+#     BACKEND_URL                = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api/graphql"
+#   }
+#
+#   depends_on = [
+#     kubernetes_namespace.my_thesis,
+#     data.kubernetes_service.ingress_controller
+#   ]
+# }
 
 output "cluster_endpoint" {
   value = google_container_cluster.gke.endpoint
