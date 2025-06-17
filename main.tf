@@ -473,8 +473,10 @@ locals {
     "postgres-0/statefulset-db.yaml",
     "postgres-0/postgres-init-configmap.yaml",
 
-    # "rabbitmq/rabbit.yaml",
-    # "rabbitmq/rabbitmq-secret.yaml",
+    "rabbitmq/rabbitmq-secret.yaml",
+    "rabbitmq/rabbitmq-configmap.yaml",
+    "rabbitmq/rabbit.yaml",
+    "rabbitmq/rabbitmq-service.yaml",
 
     "ingress.yaml",
     "argocd/thesis-project.yaml",

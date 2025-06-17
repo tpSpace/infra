@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: my-thesis
+data:
+  rabbitmq.conf: |
+    # =============================================================================
+    # CLUSTERING CONFIGURATION
+    # =============================================================================
+    cluster_formation.peer_discovery_backend = classic_config
+
+    # Disable clustering delays for single node
+    cluster_formation.randomized_startup_delay_range.min = 0
+    cluster_formation.randomized_startup_delay_range.max = 2
+
+    # =============================================================================
+    # MEMORY AND DISK MANAGEMENT
+    # =============================================================================
+    # Conservative memory settings
+    vm_memory_high_watermark.relative = 0.4
+    disk_free_limit.relative = 1.0
+
+    # Memory calculation strategy
+    vm_memory_calculation_strategy = rss
+
+    # Additional memory settings for better stability
+    vm_memory_high_watermark_paging_ratio = 0.5
+    total_memory_available_override_value = 1073741824
+
+    # =============================================================================
+    # MANAGEMENT & MONITORING
+    # =============================================================================
+    # Management plugin
+    management.tcp.port = 15672
+    management.tcp.ip = 0.0.0.0
+
+    # REMOVED: management.enable_health_check (doesn't exist in 3.12)
+
+    # Prometheus metrics
+    prometheus.tcp.port = 15692
+    prometheus.tcp.ip = 0.0.0.0
+
+    # =============================================================================
+    # USER & SECURITY SETTINGS
+    # =============================================================================
+    # Default user tags
+    default_user_tags.administrator = true
+
+    # Auth mechanisms
+    auth_mechanisms.1 = PLAIN
+    auth_mechanisms.2 = AMQPLAIN
+
+    # =============================================================================
+    # CONNECTION SETTINGS
+    # =============================================================================
+    # Heartbeat
+    heartbeat = 60
+
+    # Additional connection settings for stability
+    handshake_timeout = 10000
+    channel_max = 2047
+    frame_max = 131072
+
+    # TCP settings for better performance
+    tcp_listen_options.backlog = 128
+    tcp_listen_options.nodelay = true
+
+    # =============================================================================
+    # LOGGING CONFIGURATION
+    # =============================================================================
+    # Console logging
+    log.console = true
+    log.console.level = info
+
+    # Additional useful log categories
+    log.connection.level = info
+    log.channel.level = info
+
+    # Structured logging for better parsing
+    log.console.formatter = plaintext
+
+    # =============================================================================
+    # PERFORMANCE & STABILITY
+    # =============================================================================
+    # Collect statistics for monitoring
+    collect_statistics = coarse
+    collect_statistics_interval = 10000
+
+    # Consumer timeout (important for long-running LLM tasks)
+    consumer_timeout = 1800000
+
+    # FIXED: Message store settings (correct parameter name)
+    # msg_store_file_size_limit = 16777216  # REMOVED - doesn't exist
+
+    # Queue settings
+    queue_index_embed_msgs_below = 2048
+
+    # =============================================================================
+    # ADDITIONAL STABILITY SETTINGS
+    # =============================================================================
+    # FIXED: Mirroring settings (correct parameter name for 3.12)
+    # ha_sync_batch_size = 512  # REMOVED - use mirroring_sync_batch_size if needed
+    # mirroring_sync_batch_size = 512  # Uncomment if you plan to use classic mirroring
+
+    # REMOVED: Disk monitoring settings (don't exist in 3.12)
+    # disk_monitor_failure_retries = 10
+    # disk_monitor_failure_retry_interval = 120000
+
+  enabled_plugins: |
+    [
+      rabbitmq_management,
+      rabbitmq_prometheus,
+      rabbitmq_shovel,
+      rabbitmq_shovel_management
+    ].
