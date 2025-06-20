@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-llm
+  namespace: my-thesis
+  labels:
+    app: postgres-llm
+spec:
+  serviceName: postgres-llm # Fixed: matches service name
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-llm # Fixed: consistent labeling
+  template:
+    metadata:
+      labels:
+        app: postgres-llm # Fixed: consistent labeling
+    spec:
+      securityContext:
+        fsGroup: 999
+      volumes:
+        - name: postgres-init-scripts
+          configMap:
+            name: postgres-llm-init
+            optional: true # Added: makes ConfigMap optional
+      containers:
+        - name: postgres
+          image: postgres:17
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "384Mi"
+            limits:
+              cpu: "300m"
+              memory: "768Mi"
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-llm-secret
+                  key: db_name
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-llm-secret
+                  key: db_username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-llm-secret
+                  key: db_password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata/data
+            # Added: Additional PostgreSQL configuration
+            - name: POSTGRES_INITDB_ARGS
+              value: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+          ports:
+            - containerPort: 5432
+              name: postgresql
+              protocol: TCP
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data/pgdata
+            - name: postgres-init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Added: Startup probe for initial container startup
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12 # 60 seconds max startup time
+      # Added: Graceful shutdown period
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+        labels:
+          app: postgres-llm
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi

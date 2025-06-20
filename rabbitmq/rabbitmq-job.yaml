@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rabbitmq-setup
+  namespace: my-thesis
+spec:
+  template:
+    spec:
+      containers:
+        - name: setup
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Wait for RabbitMQ management port to be open
+              until curl -f -s http://rabbitmq:15672 >/dev/null 2>&1; do
+                echo "Waiting for RabbitMQ management API port..."
+                sleep 5
+              done
+
+              echo "RabbitMQ management API is ready"
+
+              # Test credentials with simple API call
+              until curl -f -u "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
+                     http://rabbitmq:15672/api/overview >/dev/null 2>&1; do
+                echo "Waiting for RabbitMQ credentials to be active..."
+                sleep 5
+              done
+
+              echo "RabbitMQ credentials verified"
+
+              # Create dead letter queue
+              echo "Creating dead letter queue..."
+              curl -f -u "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
+                   -X PUT -H "Content-Type: application/json" \
+                   -d '{"durable":true}' \
+                   http://rabbitmq:15672/api/queues/%2F/grade.dlq
+
+              # Create request queue with DLQ configuration
+              echo "Creating request queue..."
+              curl -f -u "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
+                   -X PUT -H "Content-Type: application/json" \
+                   -d '{"durable":true,"arguments":{"x-dead-letter-exchange":"","x-dead-letter-routing-key":"grade.dlq","x-message-ttl":1800000}}' \
+                   http://rabbitmq:15672/api/queues/%2F/grade.request
+
+              # Create result queue
+              echo "Creating result queue..."
+              curl -f -u "$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS" \
+                   -X PUT -H "Content-Type: application/json" \
+                   -d '{"durable":true}' \
+                   http://rabbitmq:15672/api/queues/%2F/grade.result
+
+              echo "RabbitMQ setup completed successfully"
+              echo "Queues created: grade.request, grade.result, grade.dlq"
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: user
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
+      restartPolicy: OnFailure

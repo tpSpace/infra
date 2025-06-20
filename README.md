@@ -126,14 +126,23 @@ terraform apply
    kubectl rollout restart deployment frontend -n my-thesis
 ```
 
+## Forward-port for rabbitmq
+
+```bash
+   kubectl port-forward svc/rabbitmq 15672:15672 -n my-thesis
+```
+
 <!-- Unable to load data: error getting cached app managed resources: InvalidSpecError: application repo git@github.com:tpSpace/infra.git is not permitted in project 'thesis' -->
 
-# IMPORTANT: Due to Kubernetes provider dependencies, you may need to run terraform apply in two phases:
-# 1. First apply only the GKE cluster and node pool:
-#    terraform apply -target=google_container_cluster.gke -target=google_container_node_pool.node_pool
-# 2. Then apply the rest of the infrastructure:
-#    terraform apply
-#
-# Alternatively, ensure you have authenticated with gcloud and have the cluster credentials:
+## IMPORTANT: Due to Kubernetes provider dependencies, you may need to run terraform apply in two phases
+
+## 1. First apply only the GKE cluster and node pool:
+
+##    terraform apply -target=google_container_cluster.gke -target=google_container_node_pool.node_pool
+## 2. Then apply the rest of the infrastructure:
+##    terraform apply
+
+## Alternatively, ensure you have authenticated with gcloud and have the cluster credentials:
+
 # gcloud auth application-default login
 # gcloud container clusters get-credentials thesis-cluster --region=asia-east2-a --project=your-project-id
