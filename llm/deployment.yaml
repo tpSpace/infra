@@ -1,0 +1,249 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thesis-llm
+  namespace: my-thesis
+  labels:
+    app: thesis-llm
+    component: api
+    version: v1
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: thesis-llm
+  template:
+    metadata:
+      labels:
+        app: thesis-llm
+        component: api
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: thesis-llm-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: thesis-llm
+          image: ghcr.io/tpspace/thesis-llm:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            # Database Configuration
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: DB_NAME
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: DB_PASSWORD
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: DATABASE_URL
+
+            # RabbitMQ Configuration
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: RABBITMQ_USERNAME
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: RABBITMQ_URL
+            - name: SUBMISSION_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: SUBMISSION_QUEUE
+            - name: RESULT_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: RESULT_QUEUE
+
+            # LLM API Configuration
+            - name: GEMINI_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: GEMINI_API_URL
+            - name: GEMINI_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: GEMINI_MODEL
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: thesis-llm-secret
+                  key: GEMINI_API_KEY
+
+            # Application Configuration
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: ENVIRONMENT
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: LOG_LEVEL
+            - name: MAX_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: MAX_WORKERS
+            - name: TIMEOUT_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: TIMEOUT_SECONDS
+
+            # K8s Configuration
+            - name: K8S_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: K8S_NAMESPACE
+            - name: K8S_JOB_TTL
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: K8S_JOB_TTL
+            - name: K8S_CPU_LIMIT
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: K8S_CPU_LIMIT
+            - name: K8S_MEMORY_LIMIT
+              valueFrom:
+                configMapKeyRef:
+                  name: thesis-llm-config
+                  key: K8S_MEMORY_LIMIT
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+
+          # Updated health checks for RabbitMQ consumer service
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "print('Service is alive')"
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import pika; connection = pika.BlockingConnection(pika.URLParameters('${RABBITMQ_URL}')); connection.close(); print('Ready')"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+
+          startupProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "print('Starting up')"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+            successThreshold: 1
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: workspace
+              mountPath: /workspace
+
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: workspace
+          emptyDir:
+            sizeLimit: 5Gi
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - thesis-llm
+                topologyKey: kubernetes.io/hostname

@@ -483,6 +483,9 @@ locals {
     "rabbitmq/rabbitmq-service.yaml",
     "rabbitmq/rabbitmq-job.yaml",
 
+    "llm/deployment.yaml",
+    "llm/llm-application.yaml",
+
     "ingress.yaml",
     "argocd/thesis-project.yaml",
   ]
