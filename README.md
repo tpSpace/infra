@@ -132,17 +132,55 @@ terraform apply
    kubectl port-forward svc/rabbitmq 15672:15672 -n my-thesis
 ```
 
+# Run all port forwards in background
+
+```bash
+kubectl port-forward -n my-thesis service/rabbitmq 5672:5672 &
+kubectl port-forward -n my-thesis service/rabbitmq 15672:15672 &
+kubectl port-forward -n my-thesis service/postgres-llm 5433:5432 &
+```
+
+# To see background jobs
+
+```bash
+jobs
+```
+
+# To kill all background jobs when done
+
+```bash
+kill %1 %2 %3 %4
+```
+
 <!-- Unable to load data: error getting cached app managed resources: InvalidSpecError: application repo git@github.com:tpSpace/infra.git is not permitted in project 'thesis' -->
 
 ## IMPORTANT: Due to Kubernetes provider dependencies, you may need to run terraform apply in two phases
 
-## 1. First apply only the GKE cluster and node pool:
+## 1. First apply only the GKE cluster and node pool
 
-##    terraform apply -target=google_container_cluster.gke -target=google_container_node_pool.node_pool
+```bash
+   terraform apply -target=google_container_cluster.gke -target=google_container_node_pool.node_pool
+```
+
 ## 2. Then apply the rest of the infrastructure:
-##    terraform apply
+
+```bash
+    terraform apply
+```
 
 ## Alternatively, ensure you have authenticated with gcloud and have the cluster credentials:
 
-# gcloud auth application-default login
-# gcloud container clusters get-credentials thesis-cluster --region=asia-east2-a --project=your-project-id
+```bash
+ gcloud auth application-default login
+```
+
+```bash
+ gcloud container clusters get-credentials thesis-cluster --region=asia-east2-a --project=your-project-id
+```
+
+## record time
+
+### Create GKE infra
+
+- 18h25 -> 18h35 10m to create GKE
+- 18h45 -> 18h48 3m to setup all services

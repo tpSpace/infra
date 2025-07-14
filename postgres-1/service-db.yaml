@@ -12,5 +12,5 @@ spec:
       protocol: TCP
       name: postgresql
   selector:
-    app: postgres
+    app: postgres-llm
   type: ClusterIP

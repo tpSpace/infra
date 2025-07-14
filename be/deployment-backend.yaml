@@ -71,13 +71,39 @@ spec:
                   key: CLIENT_ORIGIN
             - name: PORT
               value: "4000"
-          resources:
-            limits:
-              cpu: "500m"
-              memory: "1024Mi"
-            requests:
-              cpu: "250m"
-              memory: "512Mi"
+            # RabbitMQ Configuration
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RABBITMQ_USERNAME
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RABBITMQ_PASSWORD
+            - name: RABBITMQ_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: RABBITMQ_URL
+                  resources:
+          limits:
+            cpu: "300m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
           readinessProbe:
             httpGet:
               path: /health

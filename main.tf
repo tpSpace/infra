@@ -483,10 +483,9 @@ locals {
     "rabbitmq/rabbitmq-service.yaml",
     "rabbitmq/rabbitmq-job.yaml",
 
-    "llm/deployment.yaml",
-    "llm/llm-application.yaml",
-
-    "ingress.yaml",
+    "api-ingress.yaml",
+    "app-ingress.yaml",
+    "static-assets-ingress.yaml",
     "argocd/thesis-project.yaml",
   ]
 }
@@ -529,6 +528,7 @@ resource "kubectl_manifest" "argocd_apps" {
   for_each = {
     backend  = file("${path.module}/be/backend-application.yaml")
     frontend = file("${path.module}/fe/frontend-application.yaml")
+    llm      = file("${path.module}/llm/llm-application.yaml")
   }
 
   yaml_body = each.value
@@ -582,31 +582,6 @@ resource "kubectl_manifest" "argocd_be_repo_creds" {
     helm_release.argocd
   ]
 }
-
-# Alternative approach: Dedicated ConfigMap resource
-# resource "kubernetes_config_map" "app_config" {
-#   metadata {
-#     name      = "app-config"
-#     namespace = "my-thesis"
-#   }
-#
-#   data = {
-#     DATABASE_HOST               = "postgres"
-#     DATABASE_PORT              = "5432"
-#     DATASOURCE_URL             = "postgresql://${var.db_username}:${var.db_password}@postgres-headless.my-thesis.svc.cluster.local:5432/${var.db_name}?sslmode=disable"
-#     ROLE_ADMIN_CODE            = "1"
-#     ROLE_TEACHER_CODE          = "2"
-#     ROLE_STUDENT_CODE          = "3"
-#     CLIENT_ORIGIN              = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/app"
-#     NEXT_PUBLIC_GRAPHQL_URI    = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api/graphql"
-#     BACKEND_URL                = "http://${data.kubernetes_service.ingress_controller.status.0.load_balancer.0.ingress.0.ip}/api/graphql"
-#   }
-#
-#   depends_on = [
-#     kubernetes_namespace.my_thesis,
-#     data.kubernetes_service.ingress_controller
-#   ]
-# }
 
 output "cluster_endpoint" {
   value = google_container_cluster.gke.endpoint

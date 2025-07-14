@@ -9,6 +9,7 @@ spec:
     - git@github.com:tpSpace/infra.git
     - git@github.com:tpSpace/thesis-fe.git
     - git@github.com:tpSpace/thesis-be.git
+    # - git@github.com:tpSpace/thesis-grading.git
   destinations:
     - namespace: my-thesis
       server: https://kubernetes.default.svc
