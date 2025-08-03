@@ -135,7 +135,7 @@ terraform apply
 # Run all port forwards in background
 
 ```bash
-kubectl port-forward -n my-thesis service/rabbitmq 5672:5672 &
+kubectl port-forward -n my-thesis service/rabbitmq 15672:15672 &
 kubectl port-forward -n my-thesis service/rabbitmq 15672:15672 &
 kubectl port-forward -n my-thesis service/postgres-llm 5433:5432 &
 ```
